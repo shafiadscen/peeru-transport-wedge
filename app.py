@@ -237,39 +237,45 @@ st.markdown(
 )
 
 # ================= PRO EXECUTIVE COMMAND CENTER =================
-# Calculate today's metrics from loaded data
-today_date_obj = datetime.now(oman_tz).date()
-today_collections = 0.0
-today_expenses = 0.0
-containers_today = 0
-cartons_today = 0
+st.markdown("---")
+# Date selector defaulting to today (Oman time)
+selected_eval_date = st.date_input(
+    "📅 Select Date for Performance Audit",
+    value=datetime.now(oman_tz).date()
+)
 
-# Scan cash entries for today's transactions
+eval_collections = 0.0
+eval_expenses = 0.0
+containers_eval = 0
+cartons_eval = 0
+
+# Scan cash entries for selected date
 cash_info = data.get("cash", {})
 for e in cash_info.get("entries", []):
   e_date = e.get("date")
   if isinstance(e_date, datetime):
     e_date = e_date.date()
-  if e_date == today_date_obj:
+  if e_date == selected_eval_date:
     amt = e.get("amt", 0)
     if amt > 0:
-      today_collections += amt
+      eval_collections += amt
     else:
-      today_expenses += abs(amt)
+      eval_expenses += abs(amt)
 
-# Scan transporter entries for today's containers and cartons (based on unload date)
+# Scan transporter entries for selected date containers and cartons (based on unload date)
 for t_key in ["nadeem", "mukhtar", "safdar"]:
   t_info = data.get(t_key, {})
   for e in t_info.get("entries", []):
     unl_date = e.get("unl")
     if isinstance(unl_date, datetime):
       unl_date = unl_date.date()
-    if unl_date == today_date_obj:
-      containers_today += 1
-      cartons_today += int(e.get("ctns", 0))
+    if unl_date == selected_eval_date:
+      containers_eval += 1
+      cartons_eval += int(e.get("ctns", 0))
 
-net_flow = today_collections - today_expenses
+net_flow = eval_collections - eval_expenses
 net_flow_color = "#10B981" if net_flow >= 0 else "#EF4444"
+formatted_eval_date = selected_eval_date.strftime("%d-%b-%Y")
 
 st.markdown(
     f"""
@@ -319,19 +325,19 @@ st.markdown(
     </style>
 
     <div class="exec-card">
-        <div class="exec-header">⚡ Executive Command Center • Today's Performance</div>
+        <div class="exec-header">⚡ Executive Command Center • {formatted_eval_date}</div>
         <div class="exec-grid">
             <div class="exec-metric">
                 <div class="exec-label">Inflow</div>
-                <div class="exec-val" style="color: #10B981;">+{today_collections:,.3f}</div>
+                <div class="exec-val" style="color: #10B981;">+{eval_collections:,.3f}</div>
             </div>
             <div class="exec-metric">
                 <div class="exec-label">Outflow</div>
-                <div class="exec-val" style="color: #EF4444;">-{today_expenses:,.3f}</div>
+                <div class="exec-val" style="color: #EF4444;">-{eval_expenses:,.3f}</div>
             </div>
             <div class="exec-metric">
                 <div class="exec-label">Containers</div>
-                <div class="exec-val" style="color: #38BDF8;">{containers_today} <span style="font-size:10px; color:#94A3B8;">({cartons_today:,} ctns)</span></div>
+                <div class="exec-val" style="color: #38BDF8;">{containers_eval} <span style="font-size:10px; color:#94A3B8;">({cartons_eval:,} ctns)</span></div>
             </div>
             <div class="exec-metric">
                 <div class="exec-label">Net Flow</div>
