@@ -122,12 +122,21 @@ def load_cloud_data():
       app_secret=DROPBOX_APP_SECRET,
       oauth2_refresh_token=DROPBOX_REFRESH_TOKEN,
   )
+  
+  # Get file metadata to check when it was last modified by staff
+  metadata = dbx.files_get_metadata(DROPBOX_NS_PATH)
+  last_modified_utc = metadata.server_modified  # This is a UTC datetime object
+  
+  # Convert UTC modified time to Oman time (UTC +4)
+  last_modified_oman = last_modified_utc.replace(tzinfo=timezone.utc).astimezone(oman_tz)
+  file_updated_str = last_modified_oman.strftime("%d-%b-%Y %H:%M")
+
   _, res = dbx.files_download(DROPBOX_NS_PATH)
   wb = openpyxl.load_workbook(
       io.BytesIO(res.content), data_only=True, read_only=True
   )
 
-  out = {}
+  out = {"file_updated": file_updated_str}
   try:
     for key, _, sheet, kind in TABS:
       ws = None
@@ -202,16 +211,10 @@ def load_cloud_data():
     wb.close()
   return out
 
-
 # ================= UI HEADER =================
 st.markdown(
     "<h2 style='text-align: center; color: #38BDF8; margin-bottom:"
     " 0px;'>PEERU TR</h2>",
-    unsafe_allow_html=True,
-)
-st.markdown(
-    "<p style='text-align: center; color: #94A3B8; font-size: 12px;'>Full Mobile"
-    f" Report • {datetime.now(oman_tz):%d-%b-%Y %H:%M}</p>",
     unsafe_allow_html=True,
 )
 
@@ -222,6 +225,16 @@ if st.button("⟳ Fetch Latest from Cloud", use_container_width=True):
 with st.spinner("Syncing with Dropbox..."):
   data = load_cloud_data()
 
+file_saved_time = data.get("file_updated", "Unknown")
+
+st.markdown(
+    f"<p style='text-align: center; color: #94A3B8; font-size: 12px; margin-bottom: 0px;'>Full Mobile Report • Viewed: {datetime.now(oman_tz):%d-%b-%Y %H:%M}</p>",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    f"<p style='text-align: center; color: #10B981; font-size: 11px;'>📁 Staff File Saved: {file_saved_time}</p>",
+    unsafe_allow_html=True,
+)
 # ================= SUMMARY CARDS =================
 for key, label, _, kind in TABS:
   info = data.get(key, {"balance": 0})
