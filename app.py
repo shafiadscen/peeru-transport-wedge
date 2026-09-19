@@ -1,8 +1,11 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 import io
 import dropbox
 import openpyxl
 import streamlit as st
+
+# Define Oman time zone (UTC +4)
+oman_tz = timezone(timedelta(hours=4))
 
 # ================= PAGE CONFIG =================
 st.set_page_config(
