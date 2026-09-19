@@ -242,6 +242,7 @@ today_date_obj = datetime.now(oman_tz).date()
 today_collections = 0.0
 today_expenses = 0.0
 containers_today = 0
+cartons_today = 0
 
 # Scan cash entries for today's transactions
 cash_info = data.get("cash", {})
@@ -256,7 +257,7 @@ for e in cash_info.get("entries", []):
     else:
       today_expenses += abs(amt)
 
-# Scan transporter entries for today's containers (based on unload date)
+# Scan transporter entries for today's containers and cartons (based on unload date)
 for t_key in ["nadeem", "mukhtar", "safdar"]:
   t_info = data.get(t_key, {})
   for e in t_info.get("entries", []):
@@ -265,6 +266,7 @@ for t_key in ["nadeem", "mukhtar", "safdar"]:
       unl_date = unl_date.date()
     if unl_date == today_date_obj:
       containers_today += 1
+      cartons_today += int(e.get("ctns", 0))
 
 net_flow = today_collections - today_expenses
 net_flow_color = "#10B981" if net_flow >= 0 else "#EF4444"
@@ -293,23 +295,24 @@ st.markdown(
     .exec-grid {{
         display: flex;
         justify-content: space-between;
-        gap: 8px;
+        gap: 6px;
     }}
     .exec-metric {{
         flex: 1;
         background: rgba(15, 23, 42, 0.6);
         border: 1px solid #1E293B;
-        padding: 10px;
+        padding: 8px 4px;
         border-radius: 8px;
         text-align: center;
     }}
     .exec-label {{
-        font-size: 10px;
+        font-size: 9px;
         color: #94A3B8;
         margin-bottom: 4px;
+        text-transform: uppercase;
     }}
     .exec-val {{
-        font-size: 15px;
+        font-size: 13px;
         font-weight: bold;
         color: #E2E8F0;
     }}
@@ -319,20 +322,21 @@ st.markdown(
         <div class="exec-header">⚡ Executive Command Center • Today's Performance</div>
         <div class="exec-grid">
             <div class="exec-metric">
-                <div class="exec-label">INFLOW</div>
+                <div class="exec-label">Inflow</div>
                 <div class="exec-val" style="color: #10B981;">+{today_collections:,.3f}</div>
             </div>
             <div class="exec-metric">
-                <div class="exec-label">OUTFLOW</div>
+                <div class="exec-label">Outflow</div>
                 <div class="exec-val" style="color: #EF4444;">-{today_expenses:,.3f}</div>
             </div>
             <div class="exec-metric">
-                <div class="exec-label">UNLOADED</div>
-                <div class="exec-val" style="color: #38BDF8;">{containers_today} Containers</div>
+                <div class="exec-label">Containers</div>
+                <div class="exec-val" style="color: #38BDF8;">{containers_today} <span style="font-size:10px; color:#94A3B8;">({cartons_today:,} ctns)</span></div>
             </div>
-        </div>
-        <div style="margin-top: 10px; text-align: right; font-size: 11px; color: #94A3B8;">
-            Net Cash Flow: <span style="color: {net_flow_color}; font-weight: bold;">{net_flow:+,.3f} OMR</span>
+            <div class="exec-metric">
+                <div class="exec-label">Net Flow</div>
+                <div class="exec-val" style="color: {net_flow_color};">{net_flow:+,.3f}</div>
+            </div>
         </div>
     </div>
     """,
