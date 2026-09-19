@@ -123,11 +123,8 @@ def load_cloud_data():
       oauth2_refresh_token=DROPBOX_REFRESH_TOKEN,
   )
   
-  # Get file metadata to check when it was last modified by staff
   metadata = dbx.files_get_metadata(DROPBOX_NS_PATH)
-  last_modified_utc = metadata.server_modified  # This is a UTC datetime object
-  
-  # Convert UTC modified time to Oman time (UTC +4)
+  last_modified_utc = metadata.server_modified
   last_modified_oman = last_modified_utc.replace(tzinfo=timezone.utc).astimezone(oman_tz)
   file_updated_str = last_modified_oman.strftime("%d-%b-%Y %H:%M")
 
@@ -159,8 +156,11 @@ def load_cloud_data():
             summary = num(row[8])
           if i < 3 or blank(row[1]):
             continue
+          
+          # Normalize date safely for comparison
+          raw_date = row[4]
           entries.append({
-              "date": row[4],
+              "date": raw_date,
               "party": s(row[1]),
               "typ": s(row[2]),
               "det": s(row[3]),
@@ -228,11 +228,114 @@ with st.spinner("Syncing with Dropbox..."):
 file_saved_time = data.get("file_updated", "Unknown")
 
 st.markdown(
-    f"<p style='text-align: center; color: #94A3B8; font-size: 12px; margin-bottom: 0px;'>Full Mobile Report • Viewed: {datetime.now(oman_tz):%d-%b-%Y %H:%M}</p>",
+    f"<p style='text-align: center; color: #94A3B8; font-size: 11px; margin-bottom: 0px;'>Full Mobile Report • Viewed: {datetime.now(oman_tz):%d-%b-%Y %H:%M}</p>",
     unsafe_allow_html=True,
 )
 st.markdown(
     f"<p style='text-align: center; color: #10B981; font-size: 11px;'>📁 Staff File Saved: {file_saved_time}</p>",
+    unsafe_allow_html=True,
+)
+
+# ================= PRO EXECUTIVE COMMAND CENTER =================
+# Calculate today's metrics from loaded data
+today_date_obj = datetime.now(oman_tz).date()
+today_collections = 0.0
+today_expenses = 0.0
+containers_today = 0
+
+# Scan cash entries for today's transactions
+cash_info = data.get("cash", {})
+for e in cash_info.get("entries", []):
+  e_date = e.get("date")
+  if isinstance(e_date, datetime):
+    e_date = e_date.date()
+  if e_date == today_date_obj:
+    amt = e.get("amt", 0)
+    if amt > 0:
+      today_collections += amt
+    else:
+      today_expenses += abs(amt)
+
+# Scan transporter entries for today's containers (based on unload date)
+for t_key in ["nadeem", "mukhtar", "safdar"]:
+  t_info = data.get(t_key, {})
+  for e in t_info.get("entries", []):
+    unl_date = e.get("unl")
+    if isinstance(unl_date, datetime):
+      unl_date = unl_date.date()
+    if unl_date == today_date_obj:
+      containers_today += 1
+
+net_flow = today_collections - today_expenses
+net_flow_color = "#10B981" if net_flow >= 0 else "#EF4444"
+
+st.markdown(
+    f"""
+    <style>
+    .exec-card {{
+        background: linear-gradient(135deg, #1B2230 0%, #0F172A 100%);
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }}
+    .exec-header {{
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: #38BDF8;
+        font-weight: 700;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #1E293B;
+        padding-bottom: 6px;
+    }}
+    .exec-grid {{
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+    }}
+    .exec-metric {{
+        flex: 1;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid #1E293B;
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+    }}
+    .exec-label {{
+        font-size: 10px;
+        color: #94A3B8;
+        margin-bottom: 4px;
+    }}
+    .exec-val {{
+        font-size: 15px;
+        font-weight: bold;
+        color: #E2E8F0;
+    }}
+    </style>
+
+    <div class="exec-card">
+        <div class="exec-header">⚡ Executive Command Center • Today's Performance</div>
+        <div class="exec-grid">
+            <div class="exec-metric">
+                <div class="exec-label">INFLOW</div>
+                <div class="exec-val" style="color: #10B981;">+{today_collections:,.3f}</div>
+            </div>
+            <div class="exec-metric">
+                <div class="exec-label">OUTFLOW</div>
+                <div class="exec-val" style="color: #EF4444;">-{today_expenses:,.3f}</div>
+            </div>
+            <div class="exec-metric">
+                <div class="exec-label">UNLOADED</div>
+                <div class="exec-val" style="color: #38BDF8;">{containers_today} Containers</div>
+            </div>
+        </div>
+        <div style="margin-top: 10px; text-align: right; font-size: 11px; color: #94A3B8;">
+            Net Cash Flow: <span style="color: {net_flow_color}; font-weight: bold;">{net_flow:+,.3f} OMR</span>
+        </div>
+    </div>
+    """,
     unsafe_allow_html=True,
 )
 # ================= SUMMARY CARDS =================
