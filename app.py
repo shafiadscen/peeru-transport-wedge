@@ -211,7 +211,7 @@ st.markdown(
 )
 st.markdown(
     "<p style='text-align: center; color: #94A3B8; font-size: 12px;'>Full Mobile"
-    f" Report • {datetime.now():%d-%b-%Y %H:%M}</p>",
+    f" Report • {datetime.now(oman_tz):%d-%b-%Y %H:%M}</p>",
     unsafe_allow_html=True,
 )
 
