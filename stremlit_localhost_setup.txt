@@ -1,0 +1,23 @@
+C:\Users\ss4sm\Downloads\tr_widgets>py -m streamlit run streamlit_app.py
+2026-09-20 00:58:07.485 Uvicorn server started on :::8501
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.0.103:8501
+
+  Help agents write better Streamlit apps?
+  Install the official Streamlit skills by running streamlit skills in your terminal.
+
+  Stopping...
+
+C:\Users\ss4sm\Downloads\tr_widgets>py -m streamlit run streamlit_app.py
+2026-09-20 01:08:24.223 Uvicorn server started on :::8501
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.0.103:8501
+
+  Help agents write better Streamlit apps?
+  Install the official Streamlit skills by running streamlit skills in your terminal.

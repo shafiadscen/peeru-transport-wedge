@@ -1,0 +1,8 @@
+# Python and Streamlit cache
+__pycache__/
+.streamlit/
+*.pyc
+
+# Local logs and temporary files
+widget_error.log
+.DS_Store
