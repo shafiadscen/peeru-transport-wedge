@@ -381,9 +381,14 @@ if st.button("📧 Email Executive Report for Selected Date", use_container_widt
       for t_key in ["nadeem", "mukhtar", "safdar"]:
         for e in data.get(t_key, {}).get("entries", []):
           unl_val = e.get("unl")
-          if isinstance(unl_val, datetime): unl_val = unl_val.date()
+          if isinstance(unl_val, datetime): 
+              unl_val = unl_val.date()
           if unl_val == selected_eval_date:
-            container_lines.append(f"• {t_key.upper()} - Container {e.get('cont')}: {e.get('ctns')} cartons")
+            # Look for the total amount key used by your data parser (e.g., 'tot_amt', 'total_amt', or 'amt')
+            ctn_amt = e.get("tot_amt") or e.get("total_amt") or e.get("amt") or 0.0
+            container_lines.append(
+                f"• {t_key.upper()} - Container {e.get('cont')}: {e.get('ctns')} cartons — <b>{float(ctn_amt):,.3f} OMR</b>"
+            )
 
       email_html = f"""
       <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
