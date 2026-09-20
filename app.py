@@ -351,7 +351,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-================= Resend Email setup =================
+# ================= Resend Email setup =================
 import resend
 
 resend.api_key = st.secrets.get("RESEND_API_KEY", "")
