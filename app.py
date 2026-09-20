@@ -212,7 +212,73 @@ def load_cloud_data():
   finally:
     wb.close()
   return out
+# --- AUTOMATED CRON-JOB TRIGGER HANDLER ---
+query_params = st.query_params
+if query_params.get("trigger") == "daily_email":
+  try:
+    import resend
+    
+    target_date = datetime.now().date()
+    report_date_str = target_date.strftime("%d-%b-%Y")
+    
+    # Generate the itemized lines for today's data automatically
+    inflow_lines = []
+    for e in cash_info.get("entries", []):
+      e_date = e.get("date")
+      if isinstance(e_date, datetime): e_date = e_date.date()
+      if e_date == target_date and e.get("amt", 0) > 0:
+        inflow_lines.append(f"• {e.get('party')}: {e.get('amt'):,.3f} OMR ({e.get('det')})")
+    
+    outflow_lines = []
+    for e in cash_info.get("entries", []):
+      e_date = e.get("date")
+      if isinstance(e_date, datetime): e_date = e_date.date()
+      if e_date == target_date and e.get("amt", 0) < 0:
+        outflow_lines.append(f"• {e.get('party')}: {abs(e.get('amt')):,.3f} OMR ({e.get('det')})")
 
+    container_lines = []
+    for t_key in ["nadeem", "mukhtar", "safdar"]:
+      for e in data.get(t_key, {}).get("entries", []):
+        unl_val = e.get("unl")
+        if isinstance(unl_val, datetime): unl_val = unl_val.date()
+        if unl_val == target_date:
+          ctn_amt = e.get("tot_amt") or e.get("total_amt") or e.get("amt") or 0.0
+          container_lines.append(
+              f"• {t_key.upper()} - Container {e.get('cont')}: {e.get('ctns')} cartons — <b>{float(ctn_amt):,.3f} OMR</b>"
+          )
+
+    email_html = f"""
+    <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="color: #0284c7; text-align: center;">⚡ PEERU TRANSPORT COMMAND CENTER</h2>
+        <p style="text-align: center; color: #666; font-size: 14px;">Automated Executive Daily Report for <b>{report_date_str}</b></p>
+        <hr style="border: none; border-top: 1px solid #eee;" />
+        
+        <h3>1. Inflow (+ Total Collections)</h3>
+        <ul>{''.join(inflow_lines) if inflow_lines else '<li>No Inflows recorded for today</li>'}</ul>
+
+        <h3>2. Outflow (- Expenses & Payments)</h3>
+        <ul>{''.join(outflow_lines) if outflow_lines else '<li>No Outflows recorded for today</li>'}</ul>
+
+        <h3>3. Containers & Cartons Unloaded</h3>
+        <ul>{''.join(container_lines) if container_lines else '<li>No Containers unloaded today</li>'}</ul>
+
+        <hr style="border: none; border-top: 1px solid #eee;" />
+        <p style="font-size: 14px; color: #666; text-align: center;">Dispatched automatically via Cron-Job & Resend.</p>
+    </div>
+    """
+
+    params = {
+        "from": "Peeru Transport <onboarding@resend.dev>",
+        "to": [st.secrets.get("TRANSPORT_EMAIL_RECIPIENT", "")],
+        "subject": f"⚡ Automated Executive Report — {report_date_str}",
+        "html": email_html,
+    }
+    
+    resend.api_key = st.secrets.get("RESEND_API_KEY", "")
+    resend.Emails.send(params)
+    st.success("Automated report email dispatched via cron trigger!")
+  except Exception as e:
+    st.error(f"Automated email trigger failed: {e}")
 # ================= UI HEADER =================
 st.markdown(
     "<h2 style='text-align: center; color: #38BDF8; margin-bottom:"
