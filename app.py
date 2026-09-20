@@ -3,10 +3,80 @@ import io
 import dropbox
 import openpyxl
 import streamlit as st
+import resend
 
 # Define Oman time zone (UTC +4)
 oman_tz = timezone(timedelta(hours=4))
 
+# Configure Resend API Key from Streamlit secrets
+resend.api_key = st.secrets.get("RESEND_API_KEY", "")
+
+# Add an email dispatch button inside the command center UI
+if st.button("📧 Email Executive Report for Selected Date", use_container_width=True):
+  if not resend.api_key:
+    st.error("Resend API key is missing from Streamlit secrets.")
+  else:
+    try:
+      # Build the itemized text report
+      report_date_str = selected_eval_date.strftime("%d-%b-%Y")
+      
+      inflow_lines = []
+      for e in cash_info.get("entries", []):
+        e_date = e.get("date")
+        if isinstance(e_date, datetime): e_date = e_date.date()
+        if e_date == selected_eval_date and e.get("amt", 0) > 0:
+          inflow_lines.append(f"• {e.get('party')}: {e.get('amt'):,.3f} OMR ({e.get('det')})")
+      
+      outflow_lines = []
+      for e in cash_info.get("entries", []):
+        e_date = e.get("date")
+        if isinstance(e_date, datetime): e_date = e_date.date()
+        if e_date == selected_eval_date and e.get("amt", 0) < 0:
+          outflow_lines.append(f"• {e.get('party')}: {abs(e.get('amt')):,.3f} OMR ({e.get('det')})")
+
+      container_lines = []
+      for t_key in ["nadeem", "mukhtar", "safdar"]:
+        for e in data.get(t_key, {}).get("entries", []):
+          unl_val = e.get("unl")
+          if isinstance(unl_val, datetime): unl_val = unl_val.date()
+          if unl_val == selected_eval_date:
+            container_lines.append(f"• {t_key.upper()} - Container {e.get('cont')}: {e.get('ctns')} cartons")
+
+      email_html = f"""
+      <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+          <h2 style="color: #0284c7; text-align: center;">⚡ PEERU TRANSPORT COMMAND CENTER</h2>
+          <p style="text-align: center; color: #666; font-size: 14px;">Executive Daily Report for <b>{report_date_str}</b></p>
+          <hr style="border: none; border-top: 1px solid #eee;" />
+          
+          <h3>1. Inflow (+ Total Collections)</h3>
+          <ul>{''.join(inflow_lines) if inflow_lines else '<li>No Inflows recorded</li>'}</ul>
+          <p><b>Total Inflow:</b> +{eval_collections:,.3f} OMR</p>
+
+          <h3>2. Outflow (- Expenses & Payments)</h3>
+          <ul>{''.join(outflow_lines) if outflow_lines else '<li>No Outflows recorded</li>'}</ul>
+          <p><b>Total Outflow:</b> -{eval_expenses:,.3f} OMR</p>
+
+          <h3>3. Containers & Cartons Unloaded</h3>
+          <ul>{''.join(container_lines) if container_lines else '<li>No Containers unloaded</li>'}</ul>
+          <p><b>Total Containers:</b> {containers_eval} ({cartons_eval:,} ctns)</p>
+
+          <hr style="border: none; border-top: 1px solid #eee;" />
+          <h3>4. Net Cash Flow Summary</h3>
+          <p style="font-size: 16px;"><b>Net Flow:</b> <span style="color: {'#10b981' if net_flow >= 0 else '#ef4444'};">{net_flow:+,.3f} OMR</span></p>
+      </div>
+      """
+
+      params = {
+          "from": "Peeru Transport <onboarding@resend.dev>",
+          "to": [st.secrets.get("TRANSPORT_EMAIL_RECIPIENT", "")],
+          "subject": f"Peeru Transport Executive Report — {report_date_str}",
+          "html": email_html,
+      }
+      
+      email_res = resend.Emails.send(params)
+      st.success(f"🚀 Executive Report emailed successfully for {report_date_str}!")
+    except Exception as ex:
+      st.error(f"Failed to send email: {ex}")
 # ================= PAGE CONFIG =================
 st.set_page_config(
     page_title="Peeru Transport",
